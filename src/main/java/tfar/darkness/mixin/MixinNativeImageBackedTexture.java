@@ -14,37 +14,41 @@
  * the License.
  ******************************************************************************/
 
-package grondag.darkness.mixin;
+package tfar.darkness.mixin;
 
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.NativeImage;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.util.math.MatrixStack;
+import tfar.darkness.Darkness;
+import tfar.darkness.TextureAccess;
 
-import grondag.darkness.Darkness;
-import grondag.darkness.LightmapAccess;
-
-@Mixin(GameRenderer.class)
-public class MixinGameRenderer {
+@Mixin(DynamicTexture.class)
+public class MixinNativeImageBackedTexture implements TextureAccess {
 	@Shadow
-	private MinecraftClient client;
-	@Shadow
-	private LightmapTextureManager lightmapTextureManager;
+	private NativeImage dynamicTextureData;
 
-	@Inject(method = "renderWorld", at = @At(value = "HEAD"))
-	private void onRenderWorld(float tickDelta, long nanos, MatrixStack matrixStack, CallbackInfo ci) {
-		final LightmapAccess lightmap = (LightmapAccess) lightmapTextureManager;
+	private boolean enableHook = false;
 
-		if (lightmap.darkness_isDirty()) {
-			client.getProfiler().push("lightTex");
-			Darkness.updateLuminance(tickDelta, client, (GameRenderer) (Object) this, lightmap.darkness_prevFlicker());
-			client.getProfiler().pop();
+	@Inject(method = "updateDynamicTexture", at = @At(value = "HEAD"))
+	private void onRenderWorld(CallbackInfo ci) {
+		if (enableHook && Darkness.enabled) {
+			final NativeImage img = dynamicTextureData;
+			for (int b = 0; b < 16; b++) {
+				for (int s = 0; s < 16; s++) {
+					final int color = Darkness.darken(img.getPixelRGBA(b, s), b, s);
+					img.setPixelRGBA(b, s, color);
+				}
+			}
 		}
+	}
+
+	@Override
+	public void darkness_enableUploadHook() {
+		enableHook = true;
 	}
 }

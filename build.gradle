@@ -1,235 +1,163 @@
-plugins {
-	id "fabric-loom" version "0.2.7-SNAPSHOT"
-	id "eclipse"
-	id "maven-publish"
-	id "com.github.breadmoirai.github-release" version "2.2.9"
-	id "org.ajoberstar.grgit" version "3.1.1"
-	id "com.matthewprenger.cursegradle" version "1.4.0"
+buildscript {
+    repositories {
+        maven { url = 'https://files.minecraftforge.net/maven' }
+        jcenter()
+        mavenCentral()
+        maven {url='https://dist.creeper.host/Sponge/maven'}
+
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
+        classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
+    }
 }
+apply plugin: 'net.minecraftforge.gradle'
+// Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+version = "${mod_version}-${mc_version}"
+group = "com.tfar.${modid}" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+archivesBaseName = "${modid}"
 
-def ENV = System.getenv()
-
-def version_tag = project.mod_name.replaceAll('-', '_') + '_version'
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
 
 minecraft {
-	refmapName = project.mod_name + "-refmap.json"
-}
+    // The mappings can be changed at any time, and must be in the following format.
+    // snapshot_YYYYMMDD   Snapshot are built nightly.
+    // stable_#            Stables are built at the discretion of the MCP team.
+    // Use non-default mappings at your own risk. they may not always work.
+    // Simply re-run your setup task after changing the mappings to update your workspace.
+    mappings channel: "snapshot", version: "${mapping}-1.16.1"
+    // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
 
-def artifact_name = project.mod_name + "-" + project.mc_tag
+    //accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
 
-project.archivesBaseName = artifact_name
+    // Default run configurations.
+    // These can be tweaked, removed, or duplicated as needed.
+    runs {
+        client {
+            workingDirectory project.file('run')
+            arg "-mixin.config="+archivesBaseName+".mixins.json"
 
-if (grgit == null) {
-	project.version = '99.0.0-nogit'
-} else if (project.hasProperty(version_tag)) {
-	if(grgit.status().isClean()) {
-		project.version = project.getProperty(version_tag) + '.' + grgit.log().size()
-	} else {
-		project.version = project.getProperty(version_tag) + '.' + (grgit.log().size() + 1) + '-snapshot'
-	}
-} else {
-	project.version = '99.0.0-local'
-}
 
-processResources {
-	inputs.property "version", project.version
+            // Recommended logging level for the console
+            property 'forge.logging.console.level', 'debug'
 
-	from(sourceSets.main.resources.srcDirs) {
-		include "fabric.mod.json"
-		expand "version": project.version
-	}
+            mods {
+                examplemod {
+                    source sourceSets.main
+                }
+            }
+        }
 
-	from(sourceSets.main.resources.srcDirs) {
-		exclude "fabric.mod.json"
-	}
-}
+        server {
+            workingDirectory project.file('run')
+            arg "-mixin.config="+archivesBaseName+".mixins.json"
 
-def eclipseName =  project.mod_name;
 
-eclipse {
-	project {
-		name = eclipseName;
-	}
-}
+            // Recommended logging level for the console
+            property 'forge.logging.console.level', 'debug'
 
-// ensure that the encoding is set to UTF-8, no matter what the system default is
-// this fixes some edge cases with special characters not displaying correctly
-// see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
-tasks.withType(JavaCompile) {
-	options.encoding = "UTF-8"
-}
-
-jar {
-	from "LICENSE"
-	manifest
-	{
-		attributes "Implementation-Title": project.archivesBaseName
-		attributes "Implementation-Version": project.version
-		attributes "Maven-Artifact": "${group}:${project.archivesBaseName}:${project.version}"
-		attributes "Built-On-Minecraft": "${project.minecraft_version}"
-		attributes "Built-On-Java": "${System.getProperty("java.vm.version")} (${System.getProperty("java.vm.vendor")})"
-	}
-}
-
-// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-// if it is present.
-// If you remove this task, sources will not be generated.
-task sourcesJar(type: Jar, dependsOn: classes) {
-	classifier = "sources"
-	from sourceSets.main.allSource
-	manifest
-	{
-		attributes "Implementation-Title": project.archivesBaseName + "-sources"
-		attributes "Implementation-Version": project.version
-		attributes "Maven-Artifact": "${project.group}:${project.archivesBaseName}:${project.version}:sources"
-		attributes "Built-On-Minecraft": "${project.minecraft_version}"
-		attributes "Built-On-Java": "${System.getProperty("java.vm.version")} (${System.getProperty("java.vm.vendor")})"
-	}
-}
-
-sourceSets {
-	main {
-	        java {
-	            include 'grondag/**/*'
-	            exclude '*.DS_Store'
-	        }
-	        resources
-	        {
-	        	include '**/*'
-	        	exclude '*.DS_Store'
-	        }
-	    }
-    test {
-        java {
-            exclude 'grondag/**'
+            mods {
+                examplemod {
+                    source sourceSets.main
+                }
+            }
         }
     }
 }
 
+repositories{
+
+
+    maven {
+        // location of the maven that hosts JEI files
+        name = "Progwml6 maven"
+        url = "https://dvs1.progwml6.com/files/maven/"
+    }
+    maven {
+        // location of a maven mirror for JEI files, as a fallback
+        name = "ModMaven"
+        url = "https://modmaven.k-4u.nl"
+    }
+
+    jcenter()
+    mavenCentral()
+
+}
+
+dependencies {
+    // Specify the version of Minecraft to use, If this is any group other then 'net.minecraft' it is assumed
+    // that the dep is a ForgeGradle 'patcher' dependency. And it's patches will be applied.
+    // The userdev artifact is a special name and will get all sorts of transformations applied to it.
+    minecraft "net.minecraftforge:forge:${mc_version}-${forge_version}" //21
+
+    // compile against the JEI API but do not include it at runtime
+    compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}:api")
+    // at runtime, use the full JEI jar
+    runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}")
+
+    // You may put jars on which you depend on in ./libs or you may define them like so..
+    // compile "some.group:artifact:version:classifier"
+    // compile "some.group:artifact:version"
+
+    // Real examples
+    // compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
+    // compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
+
+    // The 'provided' configuration is for optional dependencies that exist at compile-time but might not at runtime.
+    // provided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
+
+    // These dependencies get remapped to your current MCP mappings
+    // deobf 'com.mod-buildcraft:buildcraft:6.0.8:dev'
+
+    // For more info...
+    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
+    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+}
+
+// Example for how to get properties into the manifest for reading by the runtime..
+jar {
+    manifest {
+        attributes([
+                "Specification-Title": "${modid}",
+                "Specification-Vendor": "examplemodsareus",
+                "Specification-Version": "1", // We are version 1 of ourselves
+                "Implementation-Title": project.name,
+                "Implementation-Version": "${version}",
+                "Implementation-Vendor" :"examplemodsareus",
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                "MixinConfigs": "${modid}.mixins.json"
+        ])
+    }
+}
+
+// Example configuration to allow publishing using the maven-publish task
+// we define a custom artifact that is sourced from the reobfJar output task
+// and then declare that to be published
+// Note you'll need to add a repository here
+def reobfFile = file("$buildDir/reobfJar/output.jar")
+def reobfArtifact = artifacts.add('default', reobfFile) {
+    type 'jar'
+    builtBy 'reobfJar'
+}
 publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			artifactId = artifact_name;
-			artifact(remapJar) {
-				builtBy remapJar
-			}
-			artifact(sourcesJar) {
-				classifier = "sources"
-				builtBy remapSourcesJar
-			}
-		}
-	}
-
-	repositories {
-		mavenLocal()
-		maven {
-            url "https://grondag-repo.appspot.com"
-            credentials {
-				if (project.hasProperty('maven_user')){
-					username = project.getProperty('maven_user')
-				}
-				if (project.hasProperty('maven_password')){
-					password = project.getProperty('maven_password')
-				}
-			}
+    publications {
+        mavenJava(MavenPublication) {
+            artifact reobfArtifact
         }
+    }
+    repositories {
         maven {
-            url 'sftp://dblsaiko.net:22/srv/http/maven/'
-            credentials {
-				if (project.hasProperty('maven_user_2')){
-					username = project.getProperty('maven_user_2')
-				}
-				if (project.hasProperty('maven_password_2')){
-					password = project.getProperty('maven_password_2')
-				}
-			}
+            url "file:///${project.projectDir}/mcmodsrepo"
         }
-	}
+    }
 }
 
-githubRelease {
-	token project.hasProperty("github_releases_token") ? project.github_releases_token : ""
-	if(project.hasProperty("github_repository_owner")) {
-		owner project.github_repository_owner
-	}
-	if(project.hasProperty("github_repository")) {
-		repo project.github_repository
-	}
+apply plugin: 'org.spongepowered.mixin'
 
-	tagName project.version
-	targetCommitish { org.ajoberstar.grgit.Grgit.open(dir: ".").branch.current().name }
-	releaseName project.version
-
-	FilenameFilter filter = { dir, filename -> filename.contains(project.version) && !filename.contains("-dev.jar") }
-	releaseAssets = jar.destinationDir.listFiles filter
+mixin {
+    add sourceSets.main, "${modid}.refmap.json"
 }
-
-curseforge {
-	if(project.hasProperty("curseforge_api_key")) {
-		apiKey = project.properties.curseforge_api_key
-	}
-
-	if(project.hasProperty("curseforge_id")) {
-		project {
-			id = project.properties.curseforge_id
-
-			releaseType = project.release_type
-			addGameVersion project.release_version
-			addGameVersion "Fabric"
-
-			mainArtifact(remapJar) {
-				displayName = "${archives_base_name}-${project.version}.jar"
-
-				if(project.hasProperty("required_dep_slugs") || project.hasProperty("embedded_lib_slugs") || project.hasProperty("optional_dep_slugs") || project.hasProperty("compatible_tool_slugs") || project.hasProperty("incompatible_slugs")) {
-					relations {
-						if(project.hasProperty("required_dep_slugs")) {
-							project.required_dep_slugs.split(", ").each { String slug ->
-								requiredDependency slug
-							}
-						}
-
-						if(project.hasProperty("embedded_lib_slugs")) {
-							project.embedded_lib_slugs.split(", ").each { String slug ->
-								embeddedLibrary slug
-							}
-						}
-
-						if(project.hasProperty("optional_dep_slugs")) {
-							project.optional_dep_slugs.split(", ").each { String slug ->
-								optionalDependency slug
-							}
-						}
-
-						if(project.hasProperty("compatible_tool_slugs")) {
-							project.compatible_tool_slugs.split(", ").each { String slug ->
-								tool slug
-							}
-						}
-
-						if(project.hasProperty("incompatible_slugs")) {
-							project.incompatible_slugs.split(", ").each { String slug ->
-								incompatible slug
-							}
-						}
-					}
-				}
-			}
-
-			addArtifact(sourcesJar) {
-				displayName = "${archives_base_name}-${minecraft_version}-${project.version}-sources.jar"
-			}
-
-			afterEvaluate {
-				uploadTask.dependsOn remapSourcesJar
-			}
-		}
-		options {
-			forgeGradleIntegration = false
-		}
-	}
-}
-
-apply from: 'dependencies.gradle'

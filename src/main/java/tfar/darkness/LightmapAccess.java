@@ -14,8 +14,10 @@
  * the License.
  ******************************************************************************/
 
-package grondag.darkness;
+package tfar.darkness;
 
-public interface TextureAccess {
-	void darkness_enableUploadHook();
+public interface LightmapAccess {
+	boolean darkness_isDirty();
+
+	float darkness_prevFlicker();
 }

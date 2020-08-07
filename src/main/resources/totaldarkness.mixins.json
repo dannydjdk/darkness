@@ -1,13 +1,14 @@
 {
   "required": true,
-  "package": "grondag.darkness.mixin",
+  "package": "tfar.darkness.mixin",
+  "refmap": "totaldarkness.refmap.json",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
     "MixinGameRenderer",
-	"MixinLightmapTextureManager",
-	"MixinNativeImageBackedTexture",
+    "MixinLightmapTextureManager",
+    "MixinNativeImageBackedTexture",
     "MixinTheEndDimension",
-	"MixinTheNetherDimension"
+    "MixinTheNetherDimension"
       ],
   "injectors": {
     "defaultRequire": 1
