@@ -24,10 +24,13 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.DimensionType;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.ExtensionPoint;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.network.FMLNetworkConstants;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,8 +42,11 @@ public class Darkness {
 	public static final String MODID = "totaldarkness";
 
 	public Darkness() {
-		ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, CLIENT_SPEC);
-		FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onConfigChange);
+		if (FMLEnvironment.dist.isClient()) {
+			ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, CLIENT_SPEC);
+			FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onConfigChange);
+			ModLoadingContext.get().registerExtensionPoint(ExtensionPoint.DISPLAYTEST, () -> Pair.of(() -> FMLNetworkConstants.IGNORESERVERONLY, (a, b) -> true));
+		}
 	}
 
 
@@ -75,14 +81,14 @@ public class Darkness {
 	}
 
 	private static boolean isDark(World world) {
-		final RegistryKey<World> dimType = world.func_234923_W_();
-		if (dimType == World.field_234918_g_) {
+		final RegistryKey<World> dimType = world.getDimensionKey();
+		if (dimType == World.OVERWORLD) {
 			return Config.darkOverworld.get();
-		} else if (dimType == World.field_234919_h_) {
+		} else if (dimType == World.THE_NETHER) {
 			return Config.darkNether.get();
-		} else if (dimType == World.field_234920_i_) {
+		} else if (dimType == World.THE_END) {
 			return Config.darkEnd.get();
-		} else if (world.func_230315_m_().hasSkyLight()) {
+		} else if (world.getDimensionType().hasSkyLight()) {
 			return Config.darkDefault.get();
 		} else {
 			return Config.darkSkyless.get();
@@ -91,11 +97,11 @@ public class Darkness {
 
 	private static float skyFactor(World world) {
 		if (!Config.blockLightOnly.get() && isDark(world)) {
-			if (world.func_230315_m_().hasSkyLight()) {
-				final float angle = world.getCelestialAngle(0);
+			if (world.getDimensionType().hasSkyLight()) {
+				final float angle = world.func_242415_f(0);
 				if (angle > 0.25f && angle < 0.75f) {
 					final float oldWeight = Math.max(0, (Math.abs(angle - 0.5f) - 0.2f)) * 20;
-					final float moon = Config.ignoreMoonPhase.get() ? 0 : world.getCurrentMoonPhaseFactor();
+					final float moon = Config.ignoreMoonPhase.get() ? 0 : world.getMoonFactor();
 					return MathHelper.lerp(oldWeight * oldWeight * oldWeight, moon * moon, 1f);
 				} else {
 					return 1;
@@ -140,7 +146,7 @@ public class Darkness {
 
 			final float dimSkyFactor = Darkness.skyFactor(world);
 			final float ambient = world.getSunBrightness(1.0F);
-			final DimensionType dim = world.func_230315_m_();
+			final DimensionType dim = world.getDimensionType();
 			final boolean blockAmbient = !Darkness.isDark(world);
 
 			for (int skyIndex = 0; skyIndex < 16; ++skyIndex) {
@@ -151,7 +157,7 @@ public class Darkness {
 				float min = skyFactor * 0.05f;
 				final float rawAmbient = ambient * skyFactor;
 				final float minAmbient = rawAmbient * (1 - min) + min;
-				final float skyBase = dim.func_236021_a_(skyIndex) * minAmbient;
+				final float skyBase = dim.getAmbientLight(skyIndex) * minAmbient;
 
 				min = 0.35f * skyFactor;
 				float v = skyBase * (rawAmbient * (1 - min) + min);
@@ -173,7 +179,7 @@ public class Darkness {
 						blockFactor = 1 - blockFactor * blockFactor * blockFactor * blockFactor;
 					}
 
-					final float blockBase = blockFactor * dim.func_236021_a_(blockIndex) * (prevFlicker * 0.1F + 1.5F);
+					final float blockBase = blockFactor * dim.getAmbientLight(blockIndex) * (prevFlicker * 0.1F + 1.5F);
 					min = 0.4f * blockFactor;
 					final float blockGreen = blockBase * ((blockBase * (1 - min) + min) * (1 - min) + min);
 					final float blockBlue = blockBase * (blockBase * blockBase * (1 - min) + min);
@@ -189,7 +195,7 @@ public class Darkness {
 					blue = blue * (0.99F - min) + min;
 
 					//the end
-					if (world.func_234923_W_() == World.field_234920_i_) {
+					if (world.getDimensionKey() == World.THE_END) {
 						red = skyFactor * 0.22F + blockBase * 0.75f;
 						green = skyFactor * 0.28F + blockGreen * 0.75f;
 						blue = skyFactor * 0.25F + blockBlue * 0.75f;

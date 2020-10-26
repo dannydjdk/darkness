@@ -4,12 +4,15 @@
   "refmap": "totaldarkness.refmap.json",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
+
+  ],
+  "client": [
     "MixinGameRenderer",
     "MixinLightmapTextureManager",
     "MixinNativeImageBackedTexture",
     "MixinTheEndDimension",
     "MixinTheNetherDimension"
-      ],
+  ],
   "injectors": {
     "defaultRequire": 1
   }

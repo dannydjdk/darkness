@@ -27,7 +27,7 @@ import tfar.darkness.Darkness;
 
 @Mixin(DimensionRenderInfo.Nether.class)
 public class MixinTheNetherDimension {
-	private static double MIN = 0.029999999329447746D;
+	private static double MIN = 0.03D;
 
 	@Inject(method = "func_230494_a_", at = @At(value = "RETURN"), cancellable = true)
 	private void onAdjustSkyColor(CallbackInfoReturnable<Vector3d> ci) {
