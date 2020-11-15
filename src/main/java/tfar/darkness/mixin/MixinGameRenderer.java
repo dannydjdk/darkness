@@ -14,37 +14,40 @@
  * the License.
  ******************************************************************************/
 
-package grondag.darkness.mixin;
+package tfar.darkness.mixin;
 
+import com.mojang.blaze3d.matrix.MatrixStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LightTexture;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.util.math.MatrixStack;
-
-import grondag.darkness.Darkness;
-import grondag.darkness.LightmapAccess;
+import tfar.darkness.Darkness;
+import tfar.darkness.LightmapAccess;
 
 @Mixin(GameRenderer.class)
 public class MixinGameRenderer {
+
+	@Final
 	@Shadow
-	private MinecraftClient client;
+	private Minecraft mc;
+	@Final
 	@Shadow
-	private LightmapTextureManager lightmapTextureManager;
+	private LightTexture lightmapTexture;
 
 	@Inject(method = "renderWorld", at = @At(value = "HEAD"))
 	private void onRenderWorld(float tickDelta, long nanos, MatrixStack matrixStack, CallbackInfo ci) {
-		final LightmapAccess lightmap = (LightmapAccess) lightmapTextureManager;
+		final LightmapAccess lightmap = (LightmapAccess) lightmapTexture;
 
 		if (lightmap.darkness_isDirty()) {
-			client.getProfiler().push("lightTex");
-			Darkness.updateLuminance(tickDelta, client, (GameRenderer) (Object) this, lightmap.darkness_prevFlicker());
-			client.getProfiler().pop();
+			mc.getProfiler().startSection("lightTex");
+			Darkness.updateLuminance(tickDelta, mc, (GameRenderer) (Object) this, lightmap.darkness_prevFlicker());
+			mc.getProfiler().endSection();
 		}
 	}
 }

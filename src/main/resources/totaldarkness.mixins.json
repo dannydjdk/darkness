@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "package": "tfar.darkness.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "totaldarkness.refmap.json",
+
+  "mixins": [
+      ],
+  "client": [
+  "MixinGameRenderer",
+  "MixinLightmapTextureManager",
+  "MixinNativeImageBackedTexture",
+  "MixinTheEndDimension",
+  "MixinTheNetherDimension"
+],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

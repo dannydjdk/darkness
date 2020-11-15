@@ -22,6 +22,8 @@ run
 *.iml
 *.ipr
 *.iws
+.idea
+.gradle
 
 ## Jars
 

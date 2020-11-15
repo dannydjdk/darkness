@@ -14,26 +14,26 @@
  * the License.
  ******************************************************************************/
 
-package grondag.darkness.mixin;
+package tfar.darkness.mixin;
 
+import net.minecraft.world.dimension.NetherDimension;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.dimension.TheEndDimension;
 
-import grondag.darkness.Darkness;
+import tfar.darkness.Darkness;
 
-@Mixin(TheEndDimension.class)
-public class MixinTheEndDimension {
+@Mixin(NetherDimension.class)
+public class MixinTheNetherDimension {
 	private static Vec3d darkFog = null;
-	private static double MIN = 0.029999999329447746D;
+	private static final double MIN = 0.029999999329447746D;
 
 	@Inject(method = "getFogColor", at = @At(value = "RETURN"), cancellable = true)
 	private void onGetFogColor(CallbackInfoReturnable<Vec3d> ci) {
-		final double factor = Darkness.darkEndFog();
+		final double factor = Darkness.darkNetherFog();
 
 		if (factor != 1.0) {
 			Vec3d result = darkFog;
