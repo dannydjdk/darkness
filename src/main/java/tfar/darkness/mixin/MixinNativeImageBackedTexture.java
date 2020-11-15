@@ -14,37 +14,38 @@
  * the License.
  ******************************************************************************/
 
-package grondag.darkness.mixin;
+package tfar.darkness.mixin;
 
-import static grondag.darkness.Darkness.enabled;
+import static tfar.darkness.Darkness.enabled;
 
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.NativeImage;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
 
-import grondag.darkness.Darkness;
-import grondag.darkness.TextureAccess;
+import tfar.darkness.Darkness;
+import tfar.darkness.TextureAccess;
 
-@Mixin(NativeImageBackedTexture.class)
+@Mixin(DynamicTexture.class)
 public class MixinNativeImageBackedTexture implements TextureAccess {
 	@Shadow
-	NativeImage image;
+	private
+	NativeImage dynamicTextureData;
 
 	private boolean enableHook = false;
 
-	@Inject(method = "upload", at = @At(value = "HEAD"))
+	@Inject(method = "updateDynamicTexture", at = @At(value = "HEAD"))
 	private void onRenderWorld(CallbackInfo ci) {
 		if (enableHook && enabled) {
-			final NativeImage img = image;
+			final NativeImage img = dynamicTextureData;
 			for (int b = 0; b < 16; b++) {
 				for (int s = 0; s < 16; s++) {
-					final int color = Darkness.darken(img.getPixelRgba(b, s), b, s);
-					img.setPixelRgba(b, s, color);
+					final int color = Darkness.darken(img.getPixelRGBA(b, s), b, s);
+					img.setPixelRGBA(b, s, color);
 				}
 			}
 		}

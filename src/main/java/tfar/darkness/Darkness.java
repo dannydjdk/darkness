@@ -13,122 +13,97 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  ******************************************************************************/
-package grondag.darkness;
+package tfar.darkness;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.Properties;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.potion.Effects;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.ExtensionPoint;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.network.FMLNetworkConstants;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.dimension.Dimension;
 import net.minecraft.world.dimension.DimensionType;
 
-import net.fabricmc.loader.api.FabricLoader;
-
+@Mod(Darkness.MODID)
 public class Darkness {
+	static final String MODID = "totaldarkness";
 	public static Logger LOG = LogManager.getLogger("Darkness");
 
-	private static final boolean darkOverworld;
-	private static final boolean darkDefault;
-	private static final boolean darkNether;
-	private static final double darkNetherFog;
-	private static final boolean darkEnd;
-	private static final double darkEndFog;
-	private static final boolean darkSkyless;
+
+	public Darkness() {
+		if (FMLEnvironment.dist.isClient()) {
+			ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, CLIENT_SPEC);
+			FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onConfigChange);
+			ModLoadingContext.get().registerExtensionPoint(ExtensionPoint.DISPLAYTEST, () -> Pair.of(() -> FMLNetworkConstants.IGNORESERVERONLY, (a, b) -> true));
+		}
+	}
+
+
+	private void onConfigChange(ModConfig.ModConfigEvent e) {
+		if (e.getConfig().getModId().equals(MODID))
+		bake();
+	}
+
+	public static final Config CLIENT;
+	public static final ForgeConfigSpec CLIENT_SPEC;
 
 	static {
-		final File configDir = FabricLoader.getInstance().getConfigDirectory();
-		if (!configDir.exists()) {
-			LOG.warn("[Darkness] Could not access configuration directory: " + configDir.getAbsolutePath());
-		}
+		final Pair<Config, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(Config::new);
+		CLIENT_SPEC = specPair.getRight();
+		CLIENT = specPair.getLeft();
+	}
 
-		final File configFile = new File(configDir, "darkness.properties");
-		final Properties properties = new Properties();
-		if (configFile.exists()) {
-			try (FileInputStream stream = new FileInputStream(configFile)) {
-				properties.load(stream);
-			} catch (final IOException e) {
-				LOG.warn("[Darkness] Could not read property file '" + configFile.getAbsolutePath() + "'", e);
-			}
-		}
+	public static void bake() {
+		Config.darkNetherFogEffective = Config.darkNether.get() ? Config.darkNetherFogConfigured.get() : 1.0;
+		Config.darkEndFogEffective = Config.darkEnd.get() ? Config.darkEndFogConfigured.get() : 1.0;
+	}
 
-		darkOverworld = properties.computeIfAbsent("dark_overworld", (a) -> "true").equals("true");
-		darkDefault = properties.computeIfAbsent("dark_default", (a) -> "true").equals("true");
-		darkNether = properties.computeIfAbsent("dark_nether", (a) -> "true").equals("true");
-		darkEnd = properties.computeIfAbsent("dark_end", (a) -> "true").equals("true");
-		darkSkyless = properties.computeIfAbsent("dark_skyless", (a) -> "true").equals("true");
-
-		double fog = darkNether ? 0.5 : 1.0;
-		if (darkNether) {
-			try {
-				fog = Double.parseDouble(properties.computeIfAbsent("dark_nether_fog", (a) -> "0.5").toString());
-				fog = MathHelper.clamp(fog, 0.0, 1.0);
-			} catch (final Exception e) {
-				fog = 0.5;
-				LOG.warn("Invalid configuration value for 'dark_nether_fog'. Using default value.");
-			}
-		}
-		darkNetherFog = fog;
-
-		fog = darkEnd ? 0.0 : 1.0;
-		if (darkEnd) {
-			try {
-				fog = Double.parseDouble(properties.computeIfAbsent("dark_end_fog", (a) -> "0.0").toString());
-				fog = MathHelper.clamp(fog, 0.0, 1.0);
-			} catch (final Exception e) {
-				fog = 0.0;
-				LOG.warn("Invalid configuration value for 'dark_end_fog'. Using default value.");
-			}
-		}
-		darkEndFog = fog;
-
-		try (FileOutputStream stream = new FileOutputStream(configFile)) {
-			properties.store(stream, "Darkness properties file");
-		} catch (final IOException e) {
-			LOG.warn("[Indigo] Could not store property file '" + configFile.getAbsolutePath() + "'", e);
-		}
+	public static boolean blockLightOnly() {
+		return Config.blockLightOnly.get();
 	}
 
 	public static double darkNetherFog() {
-		return darkNetherFog;
+		return Config.darkNetherFogEffective;
 	}
 
 	public static double darkEndFog() {
-		return darkEndFog;
+		return Config.darkEndFogEffective;
 	}
 
 	private static boolean isDark(World world) {
 		final DimensionType dimType = world.dimension.getType();
 		if (dimType == DimensionType.OVERWORLD) {
-			return darkOverworld;
+			return Config.darkOverworld.get();
 		} else if (dimType == DimensionType.THE_NETHER) {
-			return darkNether;
+			return Config.darkNether.get();
 		} else if (dimType == DimensionType.THE_END) {
-			return darkEnd;
+			return Config.darkEnd.get();
 		} else if (world.dimension.hasSkyLight()) {
-			return darkDefault;
+			return Config.darkDefault.get();
 		} else {
-			return darkSkyless;
+			return Config.darkSkyless.get();
 		}
 	}
 
 	private static float skyFactor(World world) {
 		if (isDark(world)) {
 			if (world.dimension.hasSkyLight()) {
-				final float angle = world.getSkyAngle(0);
+				final float angle = world.getCelestialAngle(0);
 				if (angle > 0.25f && angle < 0.75f) {
 					final float oldWeight = Math.max(0, (Math.abs(angle - 0.5f) - 0.2f)) * 20;
-					final float moon = world.getMoonSize();
+					final float moon = world.getCurrentMoonPhaseFactor();
 					return MathHelper.lerp(oldWeight * oldWeight * oldWeight, moon * moon, 1f);
 				} else {
 					return 1;
@@ -159,11 +134,13 @@ public class Darkness {
 		return r * 0.2126f + g * 0.7152f + b * 0.0722f;
 	}
 
-	public static void updateLuminance(float tickDelta, MinecraftClient client, GameRenderer worldRenderer, float prevFlicker) {
+	public static void updateLuminance(float tickDelta, Minecraft client, GameRenderer worldRenderer, float prevFlicker) {
 		final ClientWorld world = client.world;
 		if (world != null) {
 
-			if (!isDark(world) || client.player.hasStatusEffect(StatusEffects.NIGHT_VISION) || (client.player.hasStatusEffect(StatusEffects.CONDUIT_POWER) && client.player.method_3140() > 0) || world.getLightningTicksLeft() > 0) {
+			if (!isDark(world) || client.player.isPotionActive(Effects.NIGHT_VISION) ||
+					(client.player.isPotionActive(Effects.CONDUIT_POWER) && client.player.getWaterBrightness() > 0)
+					|| world.getTimeLightningFlash() > 0) {
 				enabled = false;
 				return;
 			} else {
@@ -171,7 +148,7 @@ public class Darkness {
 			}
 
 			final float dimSkyFactor = Darkness.skyFactor(world);
-			final float ambient = world.method_23783(1.0F);
+			final float ambient = world.getSunBrightness(1.0F);
 			final Dimension dim = world.dimension;
 			final boolean blockAmbient = !Darkness.isDark(world);
 
@@ -183,15 +160,15 @@ public class Darkness {
 				float min = skyFactor * 0.05f;
 				final float rawAmbient = ambient * skyFactor;
 				final float minAmbient = rawAmbient * (1 - min) + min;
-				final float skyBase = dim.getBrightness(skyIndex) * minAmbient;
+				final float skyBase = dim.getLightBrightness(skyIndex) * minAmbient;
 
 				min = 0.35f * skyFactor;
 				float skyRed = skyBase * (rawAmbient * (1 - min) + min);
 				float skyGreen = skyBase * (rawAmbient * (1 - min) + min);
 				float skyBlue = skyBase;
 
-				if (worldRenderer.getSkyDarkness(tickDelta) > 0.0F) {
-					final float skyDarkness = worldRenderer.getSkyDarkness(tickDelta);
+				if (worldRenderer.getBossColorModifier(tickDelta) > 0.0F) {
+					final float skyDarkness = worldRenderer.getBossColorModifier(tickDelta);
 					skyRed = skyRed * (1.0F - skyDarkness) + skyRed * 0.7F * skyDarkness;
 					skyGreen = skyGreen * (1.0F - skyDarkness) + skyGreen * 0.6F * skyDarkness;
 					skyBlue = skyBlue * (1.0F - skyDarkness) + skyBlue * 0.6F * skyDarkness;
@@ -204,7 +181,7 @@ public class Darkness {
 						blockFactor = 1 - blockFactor * blockFactor * blockFactor * blockFactor;
 					}
 
-					final float blockBase = blockFactor * dim.getBrightness(blockIndex) * (prevFlicker * 0.1F + 1.5F);
+					final float blockBase = blockFactor * dim.getLightBrightness(blockIndex) * (prevFlicker * 0.1F + 1.5F);
 					min = 0.4f * blockFactor;
 					final float blockGreen = blockBase * ((blockBase * (1 - min) + min) * (1 - min) + min);
 					final float blockBlue = blockBase * (blockBase * blockBase * (1 - min) + min);
@@ -237,7 +214,7 @@ public class Darkness {
 						blue = 1.0F;
 					}
 
-					final float gamma = (float) client.options.gamma * f;
+					final float gamma = (float) client.gameSettings.gamma * f;
 					float invRed = 1.0F - red;
 					float invGreen = 1.0F - green;
 					float invBlue = 1.0F - blue;
@@ -282,4 +259,35 @@ public class Darkness {
 			}
 		}
 	}
+
+	public static class Config {
+
+		static double darkNetherFogEffective;
+		static ForgeConfigSpec.DoubleValue darkNetherFogConfigured;
+		static ForgeConfigSpec.BooleanValue darkEnd;
+		static double darkEndFogEffective;
+		static ForgeConfigSpec.DoubleValue darkEndFogConfigured;
+		static ForgeConfigSpec.BooleanValue darkSkyless;
+		static ForgeConfigSpec.BooleanValue blockLightOnly;
+		static ForgeConfigSpec.BooleanValue ignoreMoonPhase;
+		static ForgeConfigSpec.BooleanValue darkOverworld;
+		static ForgeConfigSpec.BooleanValue darkDefault;
+		static ForgeConfigSpec.BooleanValue darkNether;
+
+
+		public Config(ForgeConfigSpec.Builder builder) {
+			builder.push("general");
+			blockLightOnly = builder.define("only_affect_block_light", false);
+			ignoreMoonPhase = builder.define("ignore_moon_phase", false);
+			darkOverworld = builder.define("dark_overworld", true);
+			darkDefault = builder.define("dark_default", true);
+			darkNether = builder.define("dark_nether", true);
+			darkNetherFogConfigured = builder.defineInRange("dark_nether_fog", .5, 0, 1d);
+			darkEnd = builder.define("dark_end", true);
+			darkEndFogConfigured = builder.defineInRange("dark_end_fog", 0, 0, 1d);
+			darkSkyless = builder.define("dark_skyless", true);
+			builder.pop();
+		}
+	}
+
 }
