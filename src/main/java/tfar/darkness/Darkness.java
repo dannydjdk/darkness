@@ -154,12 +154,12 @@ public class Darkness {
 				skyFactor = 1 - skyFactor * skyFactor * skyFactor * skyFactor;
 				skyFactor *= dimSkyFactor;
 
-				float min = skyFactor * 0.05f;
+				float min = Math.max(skyFactor * 0.05f, Config.minimumLight.get().floatValue());
 				final float rawAmbient = ambient * skyFactor;
 				final float minAmbient = rawAmbient * (1 - min) + min;
 				final float skyBase = dim.getAmbientLight(skyIndex) * minAmbient;
 
-				min = 0.35f * skyFactor;
+				min = Math.max(0.35f * skyFactor, Config.minimumLight.get().floatValue());
 				float v = skyBase * (rawAmbient * (1 - min) + min);
 				float skyRed = v;
 				float skyGreen = v;
@@ -224,7 +224,7 @@ public class Darkness {
 					green = green * (1.0F - gamma) + invGreen * gamma;
 					blue = blue * (1.0F - gamma) + invBlue * gamma;
 
-					min = 0.03f * f;
+					min = Math.max(0.03f * f, Config.minimumLight.get().floatValue());
 					red = red * (0.99F - min) + min;
 					green = green * (0.99F - min) + min;
 					blue = blue * (0.99F - min) + min;
@@ -272,6 +272,7 @@ public class Darkness {
 		static ForgeConfigSpec.BooleanValue darkOverworld;
 		static ForgeConfigSpec.BooleanValue darkDefault;
 		static ForgeConfigSpec.BooleanValue darkNether;
+		static ForgeConfigSpec.DoubleValue minimumLight;
 
 
 		public Config(ForgeConfigSpec.Builder builder) {
@@ -285,6 +286,7 @@ public class Darkness {
 			darkEnd = builder.define("dark_end", true);
 			darkEndFogConfigured = builder.defineInRange("dark_end_fog", 0, 0, 1d);
 			darkSkyless = builder.define("dark_skyless", true);
+			minimumLight = builder.defineInRange("minimum_light", 0d,0d,1d);
 			builder.pop();
 		}
 	}
